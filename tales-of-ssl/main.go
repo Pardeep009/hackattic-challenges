@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	problem_get_url  = "https://hackattic.com/challenges/tales_of_ssl/problem?access_token=8fce0749afb9a543"
-	problem_post_url = "https://hackattic.com/challenges/tales_of_ssl/solve?access_token=8fce0749afb9a543&playground=1"
+	problem_get_url  = "https://hackattic.com/challenges/tales_of_ssl/problem?access_token=<access-token>"
+	problem_post_url = "https://hackattic.com/challenges/tales_of_ssl/solve?access_token=<access-token>"
 )
 
 type Details struct {
