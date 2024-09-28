@@ -11,12 +11,9 @@ import (
 	"io"
 	"math/big"
 	"net/http"
+	"os"
 	"strconv"
-)
-
-const (
-	problem_get_url  = "https://hackattic.com/challenges/tales_of_ssl/problem?access_token=<access-token>"
-	problem_post_url = "https://hackattic.com/challenges/tales_of_ssl/solve?access_token=<access-token>"
+	"strings"
 )
 
 type Details struct {
@@ -30,8 +27,7 @@ type Problem struct {
 	RequiredData Details `json:"required_data"`
 }
 
-func getProblem() (Problem, error) {
-
+func getProblem(problem_get_url string) (Problem, error) {
 	resp, err := http.Get(problem_get_url)
 
 	if err != nil {
@@ -64,10 +60,14 @@ func createCertificate(problem Problem) (string, error) {
 		fmt.Println("Error while parsing serial no to int: ", err)
 		return "", err
 	}
+	var countryCode string
+	for _, word := range strings.Split(problem.RequiredData.Country, " ") {
+		countryCode += string(word[0])
+	}
 	certTemplate := &x509.Certificate{
 		SerialNumber: big.NewInt(serialNo),
 		Subject: pkix.Name{
-			Country:    []string{"CI"},
+			Country:    []string{countryCode},
 			CommonName: problem.RequiredData.Domain,
 		},
 	}
@@ -97,7 +97,7 @@ func createCertificate(problem Problem) (string, error) {
 	return base64Cert, nil
 }
 
-func postSolution(base64Cert string) error {
+func postSolution(solution_post_url string, base64Cert string) error {
 	data := map[string]string{
 		"certificate": base64Cert,
 	}
@@ -106,8 +106,8 @@ func postSolution(base64Cert string) error {
 		fmt.Println("Error encoding JSON data:", err)
 		return err
 	}
-	resp, err := http.Post(problem_post_url, "Content-Type: application/json", bytes.NewBuffer(jsonData))
-	// req, err := http.NewRequest("POST", problem_post_url, bytes.NewBuffer(jsonData))
+	resp, err := http.Post(solution_post_url, "Content-Type: application/json", bytes.NewBuffer(jsonData))
+	// req, err := http.NewRequest("POST", solution_post_url, bytes.NewBuffer(jsonData))
 	// if err != nil {
 	// 	fmt.Println("Error creating POST request", err)
 	// 	return err
@@ -130,18 +130,24 @@ func postSolution(base64Cert string) error {
 }
 
 func main() {
-	var problem Problem
-	problem, err := getProblem()
+	access_token := os.Getenv("ACCESS_TOKEN")
+
+	problem_get_url := "https://hackattic.com/challenges/tales_of_ssl/problem?access_token=" + access_token
+	solution_post_url := "https://hackattic.com/challenges/tales_of_ssl/solve?access_token=" + access_token + "&playground=1"
+
+	problem, err := getProblem(problem_get_url)
 	if err != nil {
 		fmt.Println("Error while getting problem:", err)
 		return
 	}
+
 	base64Cert, err := createCertificate(problem)
 	if err != nil {
 		fmt.Println("Error while creating certificate:", err)
 		return
 	}
-	err = postSolution(base64Cert)
+
+	err = postSolution(solution_post_url, base64Cert)
 	if err != nil {
 		fmt.Println("Error while submitting response", err)
 		return
